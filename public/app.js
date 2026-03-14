@@ -4,6 +4,13 @@ const sendBtn = document.getElementById("send-btn");
 const resetBtn = document.getElementById("reset-btn");
 
 let isSending = false;
+// Per-browser conversation history so each user sees only their own chat
+let conversation = [
+  {
+    role: "system",
+    content: "You are a helpful AI assistant."
+  }
+];
 
 function addMessage(role, content, isTemp = false) {
   const row = document.createElement("div");
@@ -53,6 +60,7 @@ async function sendMessage() {
   setSendingState(true);
 
   addMessage("user", text);
+  conversation.push({ role: "user", content: text });
   messageInput.value = "";
   autoResizeTextarea();
 
@@ -64,7 +72,7 @@ async function sendMessage() {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ message: text })
+      body: JSON.stringify({ messages: conversation })
     });
 
     if (!res.ok) {
@@ -74,7 +82,9 @@ async function sendMessage() {
 
     const data = await res.json();
 
-    tempAssistant.bubble.textContent = data.reply || "(No response)";
+    const reply = data.reply || "(No response)";
+    tempAssistant.bubble.textContent = reply;
+    conversation.push({ role: "assistant", content: reply });
   } catch (err) {
     console.error(err);
     tempAssistant.bubble.textContent = "Error talking to Ollama. Is it running?";
@@ -86,13 +96,13 @@ async function sendMessage() {
 
 function resetChat() {
   chatContainer.innerHTML = "";
-  fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: "New chat started.", reset: true })
-  }).catch(() => {
-    // ignore errors here, it just resets server-side history
-  });
+  conversation = [
+    {
+      role: "system",
+      content: "You are a helpful AI assistant."
+    }
+  ];
+  addMessage("assistant", "New chat started. Ask me anything.");
 }
 
 function autoResizeTextarea() {
