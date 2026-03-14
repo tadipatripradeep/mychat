@@ -14,6 +14,11 @@ const OLLAMA_CHAT_URL = process.env.OLLAMA_URL || "http://localhost:11434/api/ch
 app.use(cors());
 app.use(express.json());
 
+// Serve static frontend files
+const publicDir = path.join(__dirname, "public");
+app.use(express.static(publicDir));
+
+// API endpoint for chat
 app.post("/api/chat", async (req, res) => {
   try {
     const { messages } = req.body || {};
@@ -48,6 +53,11 @@ app.post("/api/chat", async (req, res) => {
     console.error("Server error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
+});
+
+// Fallback for any other route (so "/" serves index.html)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(publicDir, "index.html"));
 });
 
 app.listen(PORT, () => {
