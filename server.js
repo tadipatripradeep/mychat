@@ -14,42 +14,17 @@ const OLLAMA_CHAT_URL = process.env.OLLAMA_URL || "http://localhost:11434/api/ch
 app.use(cors());
 app.use(express.json());
 
-// Serve static frontend
-app.use(express.static(path.join(__dirname, "public")));
-
-// In-memory conversation history per simple session (very basic)
-let conversationHistory = [
-  {
-    role: "system",
-    content: "You are a helpful AI assistant."
-  }
-];
-
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, reset } = req.body || {};
+    const { messages } = req.body || {};
 
-    if (reset) {
-      conversationHistory = [
-        {
-          role: "system",
-          content: "You are a helpful AI assistant."
-        }
-      ];
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: "Body must include non-empty 'messages' array." });
     }
-
-    if (!message || typeof message !== "string") {
-      return res.status(400).json({ error: "Missing 'message' string in body." });
-    }
-
-    conversationHistory.push({
-      role: "user",
-      content: message
-    });
 
     const payload = {
       model: MODEL_NAME,
-      messages: conversationHistory,
+      messages,
       stream: false
     };
 
@@ -67,11 +42,6 @@ app.post("/api/chat", async (req, res) => {
 
     const data = await response.json();
     const assistantMessage = data.message?.content || "";
-
-    conversationHistory.push({
-      role: "assistant",
-      content: assistantMessage
-    });
 
     res.json({ reply: assistantMessage });
   } catch (err) {
